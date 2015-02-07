@@ -18,8 +18,11 @@ class DBFile {
 public:
 
 	File dbfile;
-	int OPEN_STATUS, recptr;
+	int OPEN_STATUS;
 	off_t pageindex;
+	off_t startofpage;
+	Record *currentrecord;
+	Page *currentpage;
 	
 	DBFile (); 
 

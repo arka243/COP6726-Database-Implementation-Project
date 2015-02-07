@@ -63,6 +63,12 @@ int Page :: GetFirst (Record *firstOne) {
 }
 
 
+Record* Page :: MovetoTop() {
+	myRecs->MoveToStart();
+	return(myRecs->Current(0));
+}
+
+
 int Page :: Append (Record *addMe) {
 	char *b = addMe->GetBits();
 
