@@ -95,24 +95,22 @@ int DBFile::GetNext(Record &fetchme)
 {
 	if(OPEN_STATUS == 1)
 	{
-		Record temprec;
-		Page pg, pg_store;
+		Page pg;
 		dbfile.GetPage(&pg, pageindex);
 		pageindex--;
 		int count = 0;
 		while(count < recptr)
 		{
-			if(pg.GetFirst(&temprec) == 1)
+			if(pg.GetFirst(&fetchme) == 1)
 			{
-				fetchme = temprec;
 				count++;
-				pg_store.Append(&temprec);
+				pg.Append(&fetchme);
 			}
 			else 
 			{
 				cout << "You have reached the end of the page! Proceeding to the next page";
-				dbfile.AddPage(&pg_store, pageindex);
-				pg_store.EmptyItOut();
+				dbfile.AddPage(&pg, pageindex);
+				pg.EmptyItOut();
 				pageindex++;
 				if(pageindex > dbfile.GetLength())
 				{
@@ -124,17 +122,13 @@ int DBFile::GetNext(Record &fetchme)
 				{
 					count = 0;
 					recptr = 1;
+					dbfile.GetPage(&pg, pageindex);
 				}	
 			}
 		}
 		recptr++;
-		while(pg.GetFirst(&temprec) != 0)
-		{
-			pg.GetFirst(&temprec);
-			pg_store.Append(&temprec);
-		}
 		pageindex++;
-		dbfile.AddPage(&pg_store, pageindex);
+		dbfile.AddPage(&pg, pageindex);
 		return 1;
 	}
 	else
