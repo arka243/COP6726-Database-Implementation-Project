@@ -15,6 +15,11 @@
 DBFile::DBFile()
 {
 	OPEN_STATUS = 0;
+<<<<<<< Updated upstream
+=======
+	pageindex = (off_t)-1;
+	recptr = 1;
+>>>>>>> Stashed changes
 }
 
 
@@ -36,8 +41,13 @@ int DBFile::Open(char *filepath)
 	else
 	{
 		dbfile.Open(1, filepath);
+<<<<<<< Updated upstream
 		pageindex = (off_t)1;
 		recptr = 1;
+=======
+		if(pageindex < 0)
+			pageindex++;
+>>>>>>> Stashed changes
 		OPEN_STATUS = 1;
 	}
 	return(OPEN_STATUS);
@@ -60,7 +70,11 @@ void DBFile::MoveFirst()
 {
 	if(OPEN_STATUS == 1)
 	{
+<<<<<<< Updated upstream
 		pageindex = (off_t)1;
+=======
+		pageindex = (off_t)0;
+>>>>>>> Stashed changes
 		recptr = 1;
 	}
 	else
@@ -73,7 +87,11 @@ void DBFile::Add(Record &addRec)
 	if(OPEN_STATUS == 1)
 	{
 		Page pg;
+<<<<<<< Updated upstream
 		pageindex = dbfile.GetLength();
+=======
+		pageindex = dbfile.GetLength() - 1;
+>>>>>>> Stashed changes
 		dbfile.GetPage(&pg, pageindex);
 		pageindex--;
 		if(pg.Append(&addRec)==0)
