@@ -22,27 +22,43 @@ DBFile::DBFile()
 
 int DBFile::Create(char *filepath, fType myType, void *startup)
 {
-	dbfile.Open(0, filepath);
-	OPEN_STATUS = 1;
-	return(OPEN_STATUS);
+	if(filepath != NULL)
+	{
+		dbfile.Open(0, filepath);
+		OPEN_STATUS = 1;
+		return(OPEN_STATUS);
+	}
+	else
+	{
+		cout << "File not found!";
+		return 0;
+	}
 }
 
 
 int DBFile::Open(char *filepath)
 {
-	if(OPEN_STATUS == 1)
+	if(filepath != NULL)
 	{
-		cout << "\nFile Already Open!";
-		return 0;
+		if(OPEN_STATUS == 1)
+		{
+			cout << "\nFile Already Open!";
+			return 0;
+		}
+		else
+		{
+			dbfile.Open(1, filepath);
+			if(pageindex < 0)
+			pageindex++;
+			OPEN_STATUS = 1;
+		}
+		return(OPEN_STATUS);
 	}
 	else
 	{
-		dbfile.Open(1, filepath);
-		if(pageindex < 0)
-			pageindex++;
-		OPEN_STATUS = 1;
+		cout << "File not found!";
+		return 0;
 	}
-	return(OPEN_STATUS);
 }
 
 
