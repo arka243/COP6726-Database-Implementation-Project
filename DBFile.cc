@@ -10,13 +10,14 @@
 #include <fstream>
 #include <stdlib.h>
 
-// stub file... replace with your own DBFile.cc
+// replaced with our own DBFile.cc
 
 DBFile::DBFile()
 {
 	OPEN_STATUS = 0;
 	pageindex = (off_t)-1;
-	startofpage = (off_t)0;
+	currec = 0;
+	currpage = 0;
 }
 
 
@@ -48,8 +49,6 @@ int DBFile::Open(char *filepath)
 		else
 		{
 			dbfile.Open(1, filepath);
-			if(pageindex < 0)
-			pageindex++;
 			OPEN_STATUS = 1;
 		}
 		return(OPEN_STATUS);
@@ -74,25 +73,13 @@ int DBFile::Close()
 }
 
 
-/*void DBFile::MoveFirst()
-{
-	if(OPEN_STATUS == 1)
-	{
-		pageindex = (off_t)0;
-		recptr = 1;
-	}
-	else
-		cout << "\nFile not Open!";
-}*/
-
-
 void DBFile::MoveFirst()
 {
 	if(OPEN_STATUS == 1)
 	{
-		pageindex = (off_t)0;
-		dbfile.GetPage(currentpage, pageindex);
-		currentrecord = currentpage->MovetoTop();
+		dbfile.GetPage(&currentpage, (off_t)0);
+		currentrecord = currentpage.MovetoTop();
+		currec = 0;
 	}
 	else
 		cout << "\nFile not Open!";
@@ -126,21 +113,18 @@ int DBFile::GetNext(Record &fetchme)
 {
 	if(OPEN_STATUS == 1)
 	{
-		Page pg;
-		int success = 0;
-		dbfile.GetPage(&pg, startofpage);
-		if(pg.GetFirst(&fetchme) == 0)
+		if(currpage == 0 || crp.GetFirst(&fetchme) == 0)
 		{
-			cout << "You've reached the end of the page -- Proceeding to Next Page";
-			startofpage++;
-			if(startofpage > dbfile.GetLength())
-				cout << "You've reached the end of the file -- no more records to fetch";
-			else
-				dbfile.GetPage(&pg, startofpage);
+			if(currpage >= dbfile.GetLength()-1)
+			{
+				cout << "You've reached the end of file!";
+				return 0;
+			}
+			dbfile.GetPage(&crp, currpage);
+			currpage++;
+			crp.GetFirst(&fetchme);
 		}
-		else
-			success = 1;	
-		return(success);
+		return 1;
 	}
 	else
 	{
@@ -152,18 +136,15 @@ int DBFile::GetNext(Record &fetchme)
 
 int DBFile::GetNext(Record &fetchRec, CNF &myCNF, Record &literal)
 {
-	int success = 0;
 	if(OPEN_STATUS == 1)
 	{
 		ComparisonEngine myCompEngine;
 		while(GetNext(fetchRec) == 1)
 		{
-			if(myCompEngine.Compare(&fetchRec, &literal, &myCNF) == 1)
-			{
-				success = 1;
-			}	
+			if(myCompEngine.Compare(&fetchRec,&literal, &myCNF))
+				return 1;
 		}
-		return(success);
+		return 0;
 	}
 	else
 	{
@@ -172,20 +153,19 @@ int DBFile::GetNext(Record &fetchRec, CNF &myCNF, Record &literal)
 	}
 }
 
+
 void DBFile::Load(Schema &mySchema, char *filepath)
 {
 	if(OPEN_STATUS == 1)
 	{
 		Record temp;
 		Page pg;
-		pageindex = dbfile.GetLength();
 		FILE *loadfile = fopen(filepath, "r");
 		if(loadfile!=NULL)
 		{
 			while(temp.SuckNextRecord(&mySchema, loadfile)==1)
 			{
-				int append_status = pg.Append(&temp);
-				if(append_status == 0)
+				if(pg.Append(&temp) == 0)
 				{
 					pageindex++;
 					dbfile.AddPage(&pg, pageindex);

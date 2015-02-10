@@ -19,11 +19,12 @@ public:
 
 	File dbfile;
 	int OPEN_STATUS;
+	int currpage;
+	int currec;
 	off_t pageindex;
-	off_t startofpage;
 	Record *currentrecord;
-	Page *currentpage;
-	
+	Page currentpage;
+	Page crp;
 	DBFile (); 
 
 	int Create (char *fpath, fType file_type, void *startup);
