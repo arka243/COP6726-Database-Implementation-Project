@@ -30,9 +30,6 @@ public:
 	// records from it
 	void FromBinary (char *bits);
 
-	// this moves the pointer to first record of the page
-	Record* MovetoTop();	
-
 	// the deletes the first record from a page and returns it; returns
 	// a zero if there were no records on the page
 	int GetFirst (Record *firstOne);
@@ -79,6 +76,9 @@ public:
 
 	// closes the file and returns the file length (in number of pages)
 	int Close ();
+  
+  //Added during project_1  to move to top of a file
+  long MoveFirst();
 
 };
 

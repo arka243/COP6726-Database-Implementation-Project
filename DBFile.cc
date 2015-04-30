@@ -6,182 +6,209 @@
 #include "ComparisonEngine.h"
 #include "DBFile.h"
 #include "Defs.h"
-#include <iostream>
+
+using namespace std;
 #include <fstream>
-#include <stdlib.h>
+#include <iostream>
+#include <string.h>
 
-// replaced with our own DBFile.cc
+// stub file .. replace it with your own DBFile.cc
 
-DBFile::DBFile()
-{
-	OPEN_STATUS = 0;
-	pageindex = (off_t)-1;
-	currec = 0;
-	currpage = 0;
+DBFile::DBFile () {
+  pageReadInProg = 0;
+  currPageIndex = 0;
 }
 
+int DBFile::Create (char *f_path, fType f_type, void *startup) {
+  /*
+   * Create .bin file if doesn't exist
+   * Open .bin file
+   */
+  checkIsFileOpen.open(f_path,ios_base::out | ios_base::in);
 
-int DBFile::Create(char *filepath, fType myType, void *startup)
-{
-	if(filepath != NULL)
-	{
-		dbfile.Open(0, filepath);
-		OPEN_STATUS = 1;
-		return(OPEN_STATUS);
-	}
-	else
-	{
-		cout << "File not found!";
-		return 0;
-	}
+  if(checkIsFileOpen.is_open()) {
+    currFile.Open(1, f_path);
+  }
+  else {
+    currFile.Open(0, f_path);
+  }
+  return 1;
 }
 
+void DBFile::Load (Schema &f_schema, char *loadpath) {
 
-int DBFile::Open(char *filepath)
-{
-	if(filepath != NULL)
-	{
-		if(OPEN_STATUS == 1)
-		{
-			cout << "\nFile Already Open!";
-			return 0;
-		}
-		else
-		{
-			dbfile.Open(1, filepath);
-			OPEN_STATUS = 1;
-		}
-		return(OPEN_STATUS);
-	}
-	else
-	{
-		cout << "File not found!";
-		return 0;
-	}
+  /*
+   * Open .tbl file
+   */
+  tblFile = fopen(loadpath, "rb");
+
+  if(!tblFile) {
+    cout << "\nFailed to Open the file: %s" << loadpath;
+    return;
+  }
+
+  currRecord = new (std::nothrow) Record;
+
+  int appendStatus = 1;
+
+  /*
+   * Read record(s) from .tbl file One at a time
+   * till EOF is reached
+   */
+  while(currRecord->SuckNextRecord(&f_schema, tblFile)) {
+
+      /*
+       * Append the sucked record to page
+       */
+      appendStatus = currPage.Append(currRecord);
+
+      /*
+       * If page is full, write the page to file
+       */
+      if(0 == appendStatus) {
+
+
+        currFile.AddPage(&currPage, currFile.GetLength());
+
+        appendStatus = 1;
+
+        /*
+         * Flush the page to re-use it to store further records
+         */
+        currPage.EmptyItOut();
+        currPage.Append(currRecord);
+      }
+  }
+
+  /*
+   * Wri te this page to file although not full because,
+   * we have sucked all records from file
+   */
+  currFile.AddPage(&currPage, currFile.GetLength());
+
+  /*
+   * Free temporary buffer
+   */
+  delete currRecord;
 }
 
+int DBFile::Open (char *f_path) {
+  /*
+   * Create .bin file if doesn't exist
+   * Open .bin file
+   */
+  checkIsFileOpen.open(f_path,ios_base::out | ios_base::in);
 
-int DBFile::Close()
-{
-	if(OPEN_STATUS == 1)
-		return dbfile.Close();
-	else
-	{
-		cout << "\nFile Not Open!";
-		return 0;
-	}
+  if(checkIsFileOpen.is_open()) {
+    currFile.Open(1, f_path);
+  }
+  else {
+    currFile.Open(0, f_path);
+  }
+
+  return 1;
 }
 
-
-void DBFile::MoveFirst()
-{
-	if(OPEN_STATUS == 1)
-	{
-		dbfile.GetPage(&currentpage, (off_t)0);
-		currentrecord = currentpage.MovetoTop();
-		currec = 0;
-	}
-	else
-		cout << "\nFile not Open!";
+int DBFile::Close () {
+  /*
+   * Close .bin file
+   */
+  currFile.Close();
 }
 
+void DBFile::MoveFirst () {
 
-void DBFile::Add(Record &addRec)
-{
-	if(OPEN_STATUS == 1)
-	{
-		Page pg;
-		pageindex = dbfile.GetLength() - 1;
-		dbfile.GetPage(&pg, pageindex);
-		pageindex--;
-		if(pg.Append(&addRec)==0)
-		{
-			pageindex++;
-			dbfile.AddPage(&pg, pageindex);
-			pg.EmptyItOut();
-			pg.Append(&addRec);
-		}
-		pageindex++;
-		dbfile.AddPage(&pg, pageindex);		
-	}
-	else
-		cout << "\nFile Not Open!";
+  /*
+   * Check if file really contain any records
+   */
+
+//	cout << " Move First";
+  if(currFile.GetLength()==0){
+    cout << "Bad operation , File Empty" ;
+  }
+  else{
+//	  cout << " Inside DB FIle Move First currPageIndex : "<<currPageIndex<<endl;
+    currPageIndex = 0;
+    currFile.MoveFirst();
+    currFile.GetPage(&currPage, currPageIndex++);
+    pageReadInProg = 1;
+  }
 }
 
+void DBFile::Add (Record &rec) {
 
-int DBFile::GetNext(Record &fetchme)
-{
-	if(OPEN_STATUS == 1)
-	{
-		if(currpage == 0 || crp.GetFirst(&fetchme) == 0)
-		{
-			if(currpage >= dbfile.GetLength()-1)
-			{
-				cout << "You've reached the end of file!";
-				return 0;
-			}
-			dbfile.GetPage(&crp, currpage);
-			currpage++;
-			crp.GetFirst(&fetchme);
-		}
-		return 1;
-	}
-	else
-	{
-		cout << "\nFile not Open!";
-		return 0;
-	}
+  if(pageReadInProg==0) {
+    // currPageIndex = 460;
+    currFile.AddPage(&currPage, currFile.GetLength());
+    pageReadInProg = 1;
+  }
+
+
+  if(currFile.GetLength()>0) //existing page
+  {
+    currFile.GetPage(&currPage,currFile.GetLength()-2);
+    currPageIndex = currFile.GetLength()-2;
+  }
+  if(!currPage.Append(&rec)) //full page
+  {
+    currPage.EmptyItOut();
+    currPage.Append(&rec);
+    currPageIndex++;
+  }
+
+  currFile.AddPage(&currPage,currPageIndex);
 }
 
-
-int DBFile::GetNext(Record &fetchRec, CNF &myCNF, Record &literal)
+int DBFile::GetNext (Record &fetchme)
 {
-	if(OPEN_STATUS == 1)
-	{
-		ComparisonEngine myCompEngine;
-		while(GetNext(fetchRec) == 1)
-		{
-			if(myCompEngine.Compare(&fetchRec,&literal, &myCNF))
-				return 1;
-		}
-		return 0;
-	}
-	else
-	{
-		cout << "\nFile not Open";
-		return 0;
-	}
+//  cout<< " current page index :" << currPageIndex << endl;
+//  cout<< " current page length :" << currFile.GetLength() << endl;
+
+	//cout << " Inside DB FIle GetNExt Page" << endl;
+
+  if(pageReadInProg==0) {
+    // currPageIndex = 460;
+//	  cout << "GetPage 1"<< currPageIndex << endl;
+    currFile.GetPage(&currPage, currPageIndex);
+    currPageIndex= currPageIndex +1;
+    pageReadInProg = 1;
+  }
+
+
+  //fetch page
+
+  if(currPage.GetFirst(&fetchme) ) {
+    return 1;
+  }
+  else{
+
+    if(!(currPageIndex > currFile.GetLength()-2))
+    {//cout << "GetPage 2  page index :"<< currPageIndex << endl;
+      currFile.GetPage(&currPage, currPageIndex++);
+      pageReadInProg++;
+      currPage.GetFirst(&fetchme);
+      return 1;
+    }
+    else{
+      return 0;
+    }
+  }
 }
 
+int DBFile::GetNext (Record &fetchme, CNF &myComparison, Record &literal) {
 
-void DBFile::Load(Schema &mySchema, char *filepath)
-{
-	if(OPEN_STATUS == 1)
-	{
-		Record temp;
-		Page pg;
-		FILE *loadfile = fopen(filepath, "r");
-		if(loadfile!=NULL)
-		{
-			while(temp.SuckNextRecord(&mySchema, loadfile)==1)
-			{
-				if(pg.Append(&temp) == 0)
-				{
-					pageindex++;
-					dbfile.AddPage(&pg, pageindex);
-					pg.EmptyItOut();
-					pg.Append(&temp);
-				}
-			}
-			pageindex++;
-			dbfile.AddPage(&pg, pageindex);
-		}
-		else
-		{
-			cout << "\nError: No file found at path:" << filepath;
-		}
-		fclose(loadfile);
+	/*
+   * now open up the text file and start procesing it
+   * read in all of the records from the text file and see if they match
+	 * the CNF expression that was typed in
+   */
+	 ComparisonEngine comp;
+
+	 while(GetNext(fetchme)){
+		if(comp.Compare (&fetchme, &literal, &myComparison)==1)
+			return 1;
 	}
-	else
-		cout << "\nFile not Open";
+
+  return 0;
+
 }

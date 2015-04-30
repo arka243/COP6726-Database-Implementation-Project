@@ -162,7 +162,14 @@ void Record :: Consume (Record *fromMe) {
 void Record :: Copy (Record *copyMe) {
 	// this is a deep copy, so allocate the bits and move them over!
 	delete [] bits;
+
+
+
+
+//	cout << " bits :" << (int *)copyMe->bits << endl;
 	bits = new (std::nothrow) char[((int *) copyMe->bits)[0]];
+
+
 	if (bits == NULL)
 	{
 		cout << "ERROR : Not enough memory. EXIT !!!\n";
@@ -359,6 +366,7 @@ void Record :: Print (Schema *mySchema) {
 		}
 	}
 
+	//cout << "Record Size : " <<((int *) bits)[0] << "\n";
 	cout << "\n";
 }
 
