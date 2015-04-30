@@ -1,0 +1,44 @@
+
+----------
+customer	2000405
+c_custkey	150000
+c_nationkey	25
+__________
+
+----------
+lineitem	21432
+l_orderkey	1500000
+l_partkey	200000
+l_shipinstruct	4
+l_shipmode	7
+__________
+
+----------
+nation	2000405
+n_nationkey	25
+__________
+
+----------
+orders	2000405
+o_custkey	150000
+o_orderdate	18446744073709551615
+o_orderkey	1500000
+__________
+
+----------
+part	21432
+p_container	40
+p_name	199996
+p_partkey	200000
+__________
+
+----------
+partsupp	4
+ps_partkey	200000
+ps_suppkey	10000
+__________
+
+----------
+supplier	4
+s_suppkey	10000
+__________
