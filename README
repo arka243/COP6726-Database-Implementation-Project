@@ -1,18 +1,26 @@
-README
+DBI Project 2 - Part 1 & 2:
+---------------------------
+ 
+GROUP MEMBERS:
+--------------
+ 
+Divya Chaganti
+UFID: 6443-6173
+Mail: divchag@ufl.edu
+ 
+Arkaprava Praharaj
+UFID: 4818-1184
+Mail: apraharaj24@ufl.edu
+ 
 
-GROUP MEMBERS-
-
-Spandana Gangisetty
-UFID: 93101886
-
-Juliet Viswanathan
-UFID: 35448362
-
-
-
-1. Extract the tar.gz file
-2. go to a2test folder
-3. Enter command "make test" in the terminal to create test.out
-4. Enter command "./test.out" to execute test file
-5. Successfully executed all the queries provided in readme.
+INSTRUCTIONS:
+-------------
+ 
+1. Extract the tar.gz file and go to the Project2 folder. The Part1 Folder refers to the part 1 of Project and the Part2 Folder refers to the part 2 of the Project.
+2. Open terminal and go to Project2 --> Part1
+3. Enter command "make" in the terminal to create test.out
+4. Enter command "./test.out" to execute test file. This will execute the part 1 of the Project
+5. Now change directory and go to Project2 --> Part2
+6. Enter command "make" in the terminal to create test.out
+7. Enter command "./test.out" to execute test file. This will execute the part 2 of the Project
 
