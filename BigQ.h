@@ -1,66 +1,59 @@
-#ifndef BIGQ_H 
+#ifndef BIGQ_H
 #define BIGQ_H
 #include <pthread.h>
+#include <queue>
+#include <vector>
 #include <iostream>
+#include <stdlib.h>
+#include <algorithm>
+#include <ctime>
 #include "Pipe.h"
 #include "File.h"
 #include "Record.h"
 
+
 using namespace std;
 
-/*
- * Use temporary structure for passing multiple aruguments
- * to worker thread
- */
-struct threadParams {
-  Pipe *inPipe;
-  Pipe *outPipe;
-  OrderMaker *sortOrder;
-  int runLen;
-#ifdef DEBUG
-  Schema *schema;
-#endif
-};
-typedef struct threadParams threadParams_t;
+typedef struct {
+Pipe *inPipe;
+Pipe *outPipe;
+OrderMaker *order;
+int runlen;
+}BigQStruct;
+        
+class CompareTwoRecords {
 
-class recOnVector {
-  public:
-    Record *currRecord;
-    int    currPageNumber;
-    int    currRunNumber;
-
-
-
-    recOnVector();
-    ~recOnVector();
-};
-
-class BigQ {
+private:
+        OrderMaker *order;
 
 public:
+        CompareTwoRecords(OrderMaker *order);
+        bool operator() ( Record *left, Record  *right) const;
+};
 
 
-#ifdef DEBUG
-	Schema *schema;
-#endif
-  Pipe *inPipe;
-  Pipe *outPipe;
-  OrderMaker *sortOrder;
-  int runLen;
+class PQComparison {
 
-#ifdef DEBUG
-	BigQ (Pipe &in, 
-        Pipe &out, 
-        OrderMaker &sortorder, 
-        int runlen,
-        Schema *schema);
-#else
-	BigQ (Pipe &in, 
-        Pipe &out, 
-        OrderMaker &sortorder, 
-        int runlen);
-#endif
-	~BigQ ();
+private:
+        OrderMaker *order;
+
+public:
+        PQComparison(OrderMaker *order);
+        bool operator() ( RunRecord*  left, RunRecord* right) const;
+};
+
+typedef priority_queue<RunRecord* , vector<RunRecord*> ,PQComparison> RecordPQ ;
+
+
+class BigQ {
+        
+public:
+        
+
+        friend void *TPMMS ( void* arg);
+        BigQ (Pipe &in, Pipe &out, OrderMaker &sortorder, int runlen);
+        ~BigQ ();
+        
 };
 
 #endif

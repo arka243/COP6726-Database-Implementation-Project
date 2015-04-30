@@ -7,37 +7,114 @@
 #include "File.h"
 #include "Comparison.h"
 #include "ComparisonEngine.h"
-#include <fstream>
-
-typedef enum {heap, sorted, tree} fType;
+#include "Defs.h"
+#include "Pipe.h"
+#include <iostream>
+#include "BigQ.h"
+#include <cstring>
 
 // stub DBFile header..replace it with your own DBFile.h 
 
-class DBFile {
-    int       pageReadInProg; /* flag to indicate if page is read from file */
-    int       currPageIndex;  /* Index of page currently being read */
-    FILE      *dbFile;        /* Pointer to DB file */
-    FILE      *tblFile;       /* Pointer to TBL file */
-    int       numRecordsRead; /* Number of records read from Page */
-    int       numPagesRead;   /* Number of pages read from file */
-    Record    *currRecord;    /* Pointer to current record being read/written */
-    Page      currPage;       /* Pointer to current page being read/written */
-    File      currFile;       /* Pointer to current file being read/written */
-    fstream   checkIsFileOpen;/* flag to check if file already open */
+
+class GenericDBFile {
+
+
+protected:
+        File file;
+        Page pg;
+        off_t pgIndex;
+        bool wrtMode;
+        char *fpath;
+        bool merge;
+
 
 public:
-    DBFile ();
 
-    int Create (char *fpath, fType file_type, void *startup);
-    int Open (char *fpath);
-    int Close ();
+        virtual void MoveFirst ()=0;
+        virtual int GetNext (Record &fetchme);
+        virtual int Create(char *f_path);
+        virtual int Open (char *f_path);
+        virtual void Load (Schema &myschema, char *loadpath)=0;
+        virtual void Add (Record &addme)=0;
+        virtual int GetNext (Record &fetchme, CNF &cnf, Record &literal)=0;
+        virtual int Close()=0;
+        virtual ~GenericDBFile();
+};
 
-    void Load (Schema &myschema, char *loadpath);
+class Heap : public GenericDBFile {
 
-    void MoveFirst ();
-    void Add (Record &addme);
-    int GetNext (Record &fetchme);
-    int GetNext (Record &fetchme, CNF &cnf, Record &literal);
+public:
+                Heap();
+                int Create(char *f_path);
+                int Open (char *f_path);
+                int GetNext (Record &fetchme);
+                void Load (Schema &myschema, char *loadpath);
+                void Add (Record &addme);
+                void MoveFirst ();
+                int GetNext (Record &fetchme, CNF &cnf, Record &literal);
+                int Close();
+                ~Heap();
+
+};
+
+class Sorted : public GenericDBFile 
+{
+                BigQ *bigq;
+                Mode mode;
+                SortInfo *sortInfo;
+                int buffsz;
+                Pipe *input;
+                Pipe *output;
+                bool queryBuilt;
+                bool sortOrderExists;
+                OrderMaker *query;
+                Page midPage;
+
+
+public:
+
+                Sorted();
+                Sorted(SortInfo* info);
+                int Create(char *f_path);
+                int Open (char *f_path);
+                void InitBigQ();
+                void MoveFirst ();
+                virtual int GetNext (Record &fetchme);
+                void Load (Schema &myschema, char *loadpath);
+                void Add (Record &addme);
+                int SeqGetNext (Record &fetchme, CNF &cnf, Record &literal);
+                int QGetNext(Record &fetchme, CNF &cnf, Record &literal);
+                int GetNext (Record &fetchme, CNF &cnf, Record &literal);
+                int BinSearch(Record& fetchme,CNF &cnf,Record &literal);
+                //int QueryMaker(OrderMaker *cnfOrder, OrderMaker *sortOrder);
+                int Merge();
+                int Close();
+                ~Sorted();
+};
+
+
+class DBFile {
+
+public:
+        DBFile (); 
+
+        int Create (char *fpath, fType file_type, void *startup);
+        int Open (char *fpath);
+        int Close ();
+
+        void Load (Schema &myschema, char *loadpath);
+
+        void MoveFirst ();
+        void Add (Record &addme);
+        int GetNext (Record &fetchme);
+        int GetNext (Record &fetchme, CNF &cnf, Record &literal);
+
+private:
+
+        Page curPage;
+        off_t curPageIndex;
+        bool toWrite;
+        GenericDBFile *myvar;
 
 };
 #endif
