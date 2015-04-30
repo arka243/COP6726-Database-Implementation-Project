@@ -10,6 +10,33 @@ Statistics :: Statistics()
 	PartitionNum = 0;
 }
 
+///////////////////// COPY CONSTRUCTOR /////////////////////
+
+Statistics :: Statistics(Statistics &copyMe)
+{
+	PartitionNum = copyMe.GetPartNum();
+	map<string, relStruct> *copyRelMap = copyMe.GetRelMap();
+	map<string, vector<string> > *copyattRel = copyMe.GetRelAtts();
+	map<int, vector<string> > *copypartinfo = copyMe.GetPartInfo();
+	for(map<string, relStruct>::iterator relSearch = copyRelMap->begin(); relSearch != copyRelMap->end(); relSearch++)
+	{
+		relStruct temprel;
+		temprel.TupleNum = relSearch->second.TupleNum;
+		temprel.partNum = relSearch->second.partNum;
+		for(map<string, unsigned long int>::iterator distinctAttSearch = (relSearch->second).distinctAtts.begin(); distinctAttSearch != (relSearch->second).distinctAtts.end(); distinctAttSearch++)
+			temprel.distinctAtts[distinctAttSearch->first] = distinctAttSearch->second;
+		relationMap[relSearch->first] = temprel;
+	}
+	for(map<int, vector<string> >::iterator partinfoSearch = copypartinfo->begin(); partinfoSearch != copypartinfo->end(); partinfoSearch++)
+	{
+		vector<string> tempvec;
+		vector<string> *ptrVec = &partinfoSearch->second;
+		for(int i=0; i < ptrVec->size(); i++)
+			tempvec.push_back(ptrVec->at(i));
+		partInfo[partinfoSearch->first] = tempvec;
+	}
+}
+
 ///////////////////// ADDREL OPERATION /////////////////////
 
 void Statistics :: AddRel(char *relName, int numTuples)
@@ -54,6 +81,52 @@ void Statistics :: AddAtt(char *relName, char *attName, int numDistincts)
 	}
 }
 
+///////////////////// COPYREL OPERATION /////////////////////
+
+void Statistics :: CopyRel(char *oldName, char *newName)
+{
+	
+	map<string, relStruct>::iterator relSearch = relationMap.find(oldName);
+	relStruct *fetchRel = &(relSearch->second);
+	relStruct temprel;
+	temprel.TupleNum = fetchRel->TupleNum;
+	for(map<string, unsigned long int>::iterator distinctAttSearch = fetchRel->distinctAtts.begin(); distinctAttSearch != fetchRel->distinctAtts.end(); distinctAttSearch++)
+	{
+		temprel.distinctAtts[distinctAttSearch->first] = distinctAttSearch->second;
+		map<string, vector<string> >::iterator relAttsSearch = relAtts.find(distinctAttSearch->first);
+		if(relAttsSearch == relAtts.end())
+		{
+			cout << "Error...Attribute not Found!";
+			return;
+		}
+		(relAttsSearch->second).push_back(newName);
+	}
+	relationMap[newName] = temprel;
+}
+
+///////////////////// WRITE OPERATION /////////////////////
+
+void Statistics :: Write(char *fromWhere)
+{
+	FILE *filepath = fopen(fromWhere, "w");
+	if(filepath != NULL)
+	{
+		for(map<string, relStruct>::iterator relSearch = relationMap.begin(); relSearch != relationMap.end(); relSearch++)
+		{
+			fprintf(filepath, "\n----------");
+			fprintf(filepath, "\n%s", relSearch->first.c_str());
+			fprintf(filepath, "\t%lu", relSearch->second.TupleNum);
+			for(map<string, unsigned long int>::iterator distinctAttSearch = (relSearch->second).distinctAtts.begin(); distinctAttSearch != (relSearch->second).distinctAtts.end(); distinctAttSearch++)
+			{
+				fprintf(filepath, "\n%s", distinctAttSearch->first.c_str());
+				fprintf(filepath, "\t%lu", distinctAttSearch->second);
+			}
+			fprintf(filepath, "\n__________\n");
+		}
+		fclose(filepath);
+	}
+}
+
 ///////////////////// READ OPERATION /////////////////////
 
 void Statistics :: Read(char *fromWhere)
@@ -93,6 +166,124 @@ void Statistics :: Read(char *fromWhere)
 		}
 	}
 }	
+
+///////////////////// APPLY OPERATION /////////////////////
+
+void Statistics :: Apply(struct AndList *parseTree, char *relNames[], int numToJoin)
+{
+	
+	int partnNum = -1;
+	int prefPos;
+	string relname, relName, attName;
+	set<string> relSet;
+	vector<string> attsPairCombine;
+	AndList *tempparseTree = parseTree;
+	map<string, vector<string> >::iterator relAttsSearch;
+	map<string, relStruct>::iterator relSearch;
+	while(tempparseTree != NULL)
+	{
+		OrList* temporList = tempparseTree->left;
+		while(temporList != NULL)
+		{
+			ComparisonOp* tempCompOp = temporList->left;
+			if(tempCompOp == NULL)
+				break;
+			int leftnum = tempCompOp->left->code;
+			string leftstr = tempCompOp->left->value;
+			attsPairCombine.push_back(ConverttoString::convert(leftnum));
+			attsPairCombine.push_back(leftstr);
+			attsPairCombine.push_back(ConverttoString::convert(tempCompOp->code));
+			int rightnum = tempCompOp->right->code;
+			string rightstr = tempCompOp->right->value;
+			attsPairCombine.push_back(ConverttoString::convert(rightnum));
+			attsPairCombine.push_back(rightstr);
+			if(leftnum == NAME)
+			{
+				prefPos = leftstr.find(".");
+				if(prefPos != string::npos)
+				{
+					relName = leftstr.substr(0, prefPos);
+					attName = leftstr.substr(prefPos+1);
+				}
+				else
+				{
+					attName = leftstr;
+					relAttsSearch = relAtts.find(attName);
+			 		if((relAttsSearch->second).size() <= 1)
+						relName = (relAttsSearch->second).at(0);
+				}
+				relSet.insert(relName);
+			}
+			if(rightnum == NAME)
+			{
+				prefPos = rightstr.find(".");
+				if(prefPos != string::npos)
+				{
+					relName = rightstr.substr(0, prefPos);
+					attName = rightstr.substr(prefPos+1);
+				}
+				else
+				{
+					attName = rightstr;
+					relAttsSearch = relAtts.find(attName);
+					if((relAttsSearch->second).size() <= 1)
+						relName = (relAttsSearch->second).at(0);
+				}
+				relSet.insert(relName);
+			}
+			if(temporList->rightOr != NULL)
+				attsPairCombine.push_back("OR");
+			temporList = temporList->rightOr;
+		}
+		if(tempparseTree->rightAnd != NULL)
+			attsPairCombine.push_back("AND");
+		attsPairCombine.push_back(".");
+		tempparseTree = tempparseTree->rightAnd;
+	}
+	for(set<string>::iterator setSearch = relSet.begin(); setSearch != relSet.end(); setSearch++)
+	{
+		relSearch = relationMap.find(*setSearch);
+		if(relSearch == relationMap.end())
+		{
+			cout<< "\nError!! Details not found";
+			return;
+		}
+		if((relSearch->second).partNum != -1)
+		{
+			partnNum = (relSearch->second).partNum;
+			break;
+		}
+	}
+	double EstimateResult = Estimate(parseTree, relNames, numToJoin);
+	if(partnNum == -1)
+	{
+		PartitionNum++;
+		vector<string> vecRel;
+		for(set<string>::iterator setSearch = relSet.begin(); setSearch != relSet.end(); setSearch++)
+		{
+			relSearch = relationMap.find(*setSearch);
+			(relSearch->second).partNum = PartitionNum;
+			(relSearch->second).TupleNum = (unsigned long int)EstimateResult;
+			vecRel.push_back(*setSearch);
+		}
+		partInfo[PartitionNum] = vecRel;
+	}
+	else
+	{
+		vector<string> vecRel = partInfo[partnNum];
+		for(int i=0; i < vecRel.size(); i++)
+			relSet.insert(vecRel.at(i));
+		vecRel.clear();
+		for(set<string>::iterator setSearch = relSet.begin(); setSearch != relSet.end(); setSearch++)
+		{
+			relSearch = relationMap.find(*setSearch);
+			(relSearch->second).partNum = partnNum;
+			(relSearch->second).TupleNum = (unsigned long int)EstimateResult;
+			vecRel.push_back(*setSearch);
+		}
+		partInfo[partnNum] = vecRel;
+	}
+}
 					
 ///////////////////// ESTIMATE OPERATION /////////////////////
 				

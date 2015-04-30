@@ -1,27 +1,27 @@
-
+ 
 %{
 
-        #include "ParseTree.h" 
-        #include <stdio.h>
-        #include <string.h>
-        #include <stdlib.h>
-        #include <iostream>
+	#include "ParseTree.h" 
+	#include <stdio.h>
+	#include <string.h>
+	#include <stdlib.h>
+	#include <iostream>
 
-        extern "C" int yyfunclex();
-        extern "C" int yyfuncparse();
-        extern "C" void yyfuncerror(char *s);
+	extern "C" int yyfunclex();
+	extern "C" int yyfuncparse();
+	extern "C" void yyfuncerror(char *s);
   
-        // this is the final parse tree that is returned        
-        struct FuncOperator *finalfunc; 
+	// this is the final parse tree that is returned	
+	struct FuncOperator *finalfunc;	
 
 %}
 
 // this stores all of the types returned by production rules
 %union {
-        struct FuncOperand *myOperand;
-        struct FuncOperator *myOperator; 
-        char *actualChars;
-        char whichOne;
+ 	struct FuncOperand *myOperand;
+	struct FuncOperator *myOperator; 
+	char *actualChars;
+	char whichOne;
 }
 
 %token <actualChars> Name
@@ -46,76 +46,76 @@
 
 CompoundExp: SimpleExp Op CompoundExp
 {
-        $$ = (struct FuncOperator *) malloc (sizeof (struct FuncOperator));     
-        $$->leftOperator = (struct FuncOperator *) malloc (sizeof (struct FuncOperator));
-        $$->leftOperator->leftOperator = NULL;
-        $$->leftOperator->leftOperand = $1;
-        $$->leftOperator->right = NULL;
-        $$->leftOperand = NULL;
-        $$->right = $3;
-        $$->code = $2;  
+	$$ = (struct FuncOperator *) malloc (sizeof (struct FuncOperator));	
+	$$->leftOperator = (struct FuncOperator *) malloc (sizeof (struct FuncOperator));
+	$$->leftOperator->leftOperator = NULL;
+	$$->leftOperator->leftOperand = $1;
+	$$->leftOperator->right = NULL;
+	$$->leftOperand = NULL;
+	$$->right = $3;
+	$$->code = $2;	
 
-        finalfunc = $$;
+	finalfunc = $$;
 }
 
 | '(' CompoundExp ')' Op CompoundExp
 {
-        $$ = (struct FuncOperator *) malloc (sizeof (struct FuncOperator));     
-        $$->leftOperator = $2;
-        $$->leftOperand = NULL;
-        $$->right = $5;
-        $$->code = $4;  
+	$$ = (struct FuncOperator *) malloc (sizeof (struct FuncOperator));	
+	$$->leftOperator = $2;
+	$$->leftOperand = NULL;
+	$$->right = $5;
+	$$->code = $4;	
 
-        finalfunc = $$;
+	finalfunc = $$;
 }
 
 | '(' CompoundExp ')'
 {
-        $$ = $2;
+	$$ = $2;
 
-        finalfunc = $$;
+	finalfunc = $$;
 }
 
 | SimpleExp
 {
-        $$ = (struct FuncOperator *) malloc (sizeof (struct FuncOperator));     
-        $$->leftOperator = NULL;
-        $$->leftOperand = $1;
-        $$->right = NULL;       
+	$$ = (struct FuncOperator *) malloc (sizeof (struct FuncOperator));	
+	$$->leftOperator = NULL;
+	$$->leftOperand = $1;
+	$$->right = NULL;	
 
-        finalfunc = $$;
+	finalfunc = $$;
 }
 
 | '-' CompoundExp
 {
-        $$ = (struct FuncOperator *) malloc (sizeof (struct FuncOperator));     
-        $$->leftOperator = $2;
-        $$->leftOperand = NULL;
-        $$->right = NULL;       
-        $$->code = '-';
+	$$ = (struct FuncOperator *) malloc (sizeof (struct FuncOperator));	
+	$$->leftOperator = $2;
+	$$->leftOperand = NULL;
+	$$->right = NULL;	
+	$$->code = '-';
 
-        finalfunc = $$;
+	finalfunc = $$;
 }
 ;
 
 Op: '-'
 {
-        $$ = '-';
+	$$ = '-';
 }
 
 | '+'
 {
-        $$ = '+';
+	$$ = '+';
 }
 
 | '*'
 {
-        $$ = '*';
+	$$ = '*';
 }
 
 | '/'
 {
-        $$ = '/';
+	$$ = '/';
 }
 ;
 
@@ -148,5 +148,4 @@ Float
 ;
 
 %%
-
 
